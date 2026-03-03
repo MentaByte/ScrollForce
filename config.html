@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#667eea">
+    <title>Configuración - Scroll Force</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .card h2 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .image-slot {
+            aspect-ratio: 1;
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .image-slot:hover {
+            border-color: #667eea;
+        }
+
+        .image-slot.has-image {
+            border-style: solid;
+            border-color: #667eea;
+        }
+
+        .image-slot.force {
+            border-color: #e74c3c;
+            border-width: 3px;
+        }
+
+        .image-slot img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .image-slot .placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #999;
+            font-size: 36px;
+        }
+
+        .image-slot .number {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .image-slot .force-badge {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background: #e74c3c;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .image-slot .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            font-size: 16px;
+            cursor: pointer;
+            display: none;
+        }
+
+        .image-slot.has-image .remove-btn {
+            display: block;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .force-selector {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .force-selector label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .force-selector select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            color: #1976d2;
+            font-size: 14px;
+        }
+
+        .info strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .back-link a {
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+        }
+
+        /* Sliders de opacidad */
+        .opacity-control {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .opacity-control label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .slider-container input[type="range"] {
+            flex: 1;
+            height: 6px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+
+        .slider-container input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+        }
+
+        .opacity-value {
+            min-width: 40px;
+            text-align: center;
+            font-weight: 600;
+            color: #667eea;
+            font-size: 14px;
+        }
+
+        /* Preview de opacidad */
+        .opacity-preview {
+            margin-top: 15px;
+            padding: 20px;
+            background: #000;
+            border-radius: 10px;
+            position: relative;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-counter {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background-color: rgba(255, 255, 255, 0.15);
+            color: #cccccc;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            user-select: none;
+        }
+
+        .preview-config-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 35px;
+            height: 35px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50%;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .opacity-preview p {
+            color: #666;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        /* Estilos para botones de selección */
+        .option-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .option-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            color: #333;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .option-btn:hover {
+            border-color: #667eea;
+        }
+
+        .option-btn.selected {
+            border-color: #667eea;
+            border-width: 3px;
+            background: #f0f4ff;
+            color: #667eea;
+            transform: scale(1.02);
+        }
+
+        .option-btn.dark {
+            background: #333;
+            color: white;
+        }
+
+        .option-btn.dark.selected {
+            background: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚙️ Configuración</h1>
+            <p>Personaliza tu galería de imágenes</p>
+        </div>
+
+        <div class="card">
+            <h2>Tus Imágenes</h2>
+            <div class="info">
+                <strong>Instrucciones:</strong>
+                Toca cada cuadro para subir una imagen desde tu galería. La imagen marcada en rojo será la que se forzará después de <span id="touchesInfo">10</span> toques.
+            </div>
+
+            <button class="btn btn-primary" id="uploadMultipleBtn" style="margin-bottom: 20px; width: 100%;">
+                📁 Subir Múltiples Imágenes
+            </button>
+
+            <div class="image-grid" id="imageGrid"></div>
+
+            <div class="force-selector">
+                <label for="forceSelect">Imagen a Forzar:</label>
+                <select id="forceSelect">
+                    <option value="1">Imagen 1</option>
+                    <option value="2">Imagen 2</option>
+                    <option value="3">Imagen 3</option>
+                    <option value="4" selected>Imagen 4</option>
+                    <option value="5">Imagen 5</option>
+                    <option value="6">Imagen 6</option>
+                    <option value="7">Imagen 7</option>
+                    <option value="8">Imagen 8</option>
+                    <option value="9">Imagen 9</option>
+                    <option value="10">Imagen 10</option>
+                    <option value="11">Imagen 11</option>
+                    <option value="12">Imagen 12</option>
+                    <option value="13">Imagen 13</option>
+                    <option value="14">Imagen 14</option>
+                    <option value="15">Imagen 15</option>
+                    <option value="16">Imagen 16</option>
+                    <option value="17">Imagen 17</option>
+                    <option value="18">Imagen 18</option>
+                    <option value="19">Imagen 19</option>
+                    <option value="20">Imagen 20</option>
+                </select>
+            </div>
+
+            <div class="force-selector" style="margin-top: 15px;">
+                <label for="touchThresholdSelect">Número de Toques para Forzar:</label>
+                <select id="touchThresholdSelect">
+                    <option value="5">5 toques</option>
+                    <option value="8">8 toques</option>
+                    <option value="10" selected>10 toques</option>
+                    <option value="12">12 toques</option>
+                    <option value="15">15 toques</option>
+                    <option value="20">20 toques</option>
+                </select>
+            </div>
+
+            <div class="opacity-control">
+                <label>Opacidad del Contador de Toques:</label>
+                <div class="slider-container">
+                    <input type="range" id="counterOpacitySlider" min="0" max="100" value="15">
+                    <span class="opacity-value" id="counterOpacityValue">15%</span>
+                </div>
+                
+                <label style="margin-top: 10px;">Opacidad del Botón de Configuración:</label>
+                <div class="slider-container">
+                    <input type="range" id="configBtnOpacitySlider" min="0" max="100" value="10">
+                    <span class="opacity-value" id="configBtnOpacityValue">10%</span>
+                </div>
+
+                <div class="opacity-preview">
+                    <div class="preview-counter" id="previewCounter">42</div>
+                    <div class="preview-config-btn" id="previewConfigBtn">⚙️</div>
+                </div>
+            </div>
+
+            <div class="opacity-control">
+                <label>Color de Fuente del Contador:</label>
+                <div class="option-buttons">
+                    <button class="option-btn" id="counterColorWhite" data-color="white">⚪ Blanco</button>
+                    <button class="option-btn dark" id="counterColorBlack" data-color="black">⚫ Negro</button>
+                </div>
+            </div>
+
+            <div class="opacity-control">
+                <label>Color de Fondo:</label>
+                <div class="option-buttons">
+                    <button class="option-btn dark" id="bgColorBlack" data-color="black">⚫ Negro</button>
+                    <button class="option-btn" id="bgColorWhite" data-color="white">⚪ Blanco</button>
+                </div>
+            </div>
+
+            <div class="opacity-control">
+                <label>Dirección del Scroll:</label>
+                <div class="option-buttons">
+                    <button class="option-btn" id="scrollVertical" data-direction="vertical">↕️ Vertical</button>
+                    <button class="option-btn" id="scrollHorizontal" data-direction="horizontal">↔️ Horizontal</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Acciones</h2>
+            <div class="buttons">
+                <button class="btn btn-secondary" id="resetBtn">Restaurar Por Defecto</button>
+            </div>
+            <div class="buttons" style="margin-top: 10px;">
+                <button class="btn btn-danger" id="logoutBtn">🚪 Cerrar Sesión</button>
+            </div>
+            <div class="info" style="margin-top: 15px; background: #e3f2fd; color: #1976d2;">
+                <strong>ℹ️ Sobre Cerrar Sesión:</strong>
+                Al cerrar sesión podrás iniciar en otro dispositivo. Solo puedes cambiar de dispositivo 1 vez al día. Tus imágenes y configuraciones se mantienen guardadas.
+            </div>
+        </div>
+
+        <div class="back-link">
+            <a href="./index.html">← Volver a la Galería</a>
+        </div>
+    </div>
+
+    <input type="file" id="fileInput" accept="image/*" multiple>
+
+    <script>
+        const TOTAL_IMAGES = 20;
+        let db;
+        let currentEditingIndex = null;
+        let forceImageIndex = 4;
+
+        const imageGrid = document.getElementById('imageGrid');
+        const fileInput = document.getElementById('fileInput');
+        const uploadMultipleBtn = document.getElementById('uploadMultipleBtn');
+        const forceSelect = document.getElementById('forceSelect');
+        const touchThresholdSelect = document.getElementById('touchThresholdSelect');
+        const resetBtn = document.getElementById('resetBtn');
+        const touchesInfo = document.getElementById('touchesInfo');
+        
+        // Elementos de opacidad
+        const counterOpacitySlider = document.getElementById('counterOpacitySlider');
+        const configBtnOpacitySlider = document.getElementById('configBtnOpacitySlider');
+        const counterOpacityValue = document.getElementById('counterOpacityValue');
+        const configBtnOpacityValue = document.getElementById('configBtnOpacityValue');
+        const previewCounter = document.getElementById('previewCounter');
+        const previewConfigBtn = document.getElementById('previewConfigBtn');
+
+        // Elementos de configuración adicional
+        const counterColorWhite = document.getElementById('counterColorWhite');
+        const counterColorBlack = document.getElementById('counterColorBlack');
+        const bgColorBlack = document.getElementById('bgColorBlack');
+        const bgColorWhite = document.getElementById('bgColorWhite');
+        const scrollVertical = document.getElementById('scrollVertical');
+        const scrollHorizontal = document.getElementById('scrollHorizontal');
+
+        // Init IndexedDB
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('EmojiForceDB', 1);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('images')) {
+                        db.createObjectStore('images', { keyPath: 'index' });
+                    }
+                };
+            });
+        }
+
+        // Guardar imagen en IndexedDB
+        function saveImage(index, dataUrl) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['images'], 'readwrite');
+                const store = transaction.objectStore('images');
+                const request = store.put({ index, dataUrl });
+
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // Obtener imagen de IndexedDB
+        function getImage(index) {
+            return new Promise((resolve) => {
+                const transaction = db.transaction(['images'], 'readonly');
+                const store = transaction.objectStore('images');
+                const request = store.get(index);
+
+                request.onsuccess = () => {
+                    if (request.result && request.result.dataUrl) {
+                        resolve(request.result.dataUrl);
+                    } else {
+                        resolve(null);
+                    }
+                };
+
+                request.onerror = () => resolve(null);
+            });
+        }
+
+        // Eliminar imagen de IndexedDB
+        function deleteImage(index) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['images'], 'readwrite');
+                const store = transaction.objectStore('images');
+                const request = store.delete(index);
+
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // Crear grid de imágenes
+        async function renderImageGrid() {
+            imageGrid.innerHTML = '';
+
+            for (let i = 1; i <= TOTAL_IMAGES; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'image-slot';
+                slot.dataset.index = i;
+
+                const number = document.createElement('div');
+                number.className = 'number';
+                number.textContent = i;
+                slot.appendChild(number);
+
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-btn';
+                removeBtn.textContent = '×';
+                removeBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    removeImage(i);
+                };
+                slot.appendChild(removeBtn);
+
+                if (i === forceImageIndex) {
+                    slot.classList.add('force');
+                    const badge = document.createElement('div');
+                    badge.className = 'force-badge';
+                    badge.textContent = 'FORZAJE';
+                    slot.appendChild(badge);
+                }
+
+                const savedImage = await getImage(i);
+
+                if (savedImage) {
+                    const img = document.createElement('img');
+                    img.src = savedImage;
+                    slot.appendChild(img);
+                    slot.classList.add('has-image');
+                } else {
+                    const placeholder = document.createElement('div');
+                    placeholder.className = 'placeholder';
+                    placeholder.textContent = '+';
+                    slot.appendChild(placeholder);
+                }
+
+                slot.onclick = () => selectImage(i);
+                imageGrid.appendChild(slot);
+            }
+        }
+
+        // Seleccionar imagen para editar
+        function selectImage(index) {
+            currentEditingIndex = index;
+            fileInput.click();
+        }
+
+        // Manejar selección de archivo(s)
+        fileInput.addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+
+            // Si es para un slot específico (clic en un cuadro)
+            if (currentEditingIndex !== null) {
+                const file = files[0];
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    await saveImage(currentEditingIndex, event.target.result);
+                    await renderImageGrid();
+                    currentEditingIndex = null;
+                    fileInput.value = '';
+                };
+                reader.readAsDataURL(file);
+            } 
+            // Si es subida múltiple (botón "Subir Múltiples Imágenes")
+            else {
+                let uploadCount = 0;
+                
+                // Encontrar los primeros espacios vacíos
+                for (let i = 1; i <= TOTAL_IMAGES && uploadCount < files.length; i++) {
+                    const existingImage = await getImage(i);
+                    if (!existingImage) {
+                        const file = files[uploadCount];
+                        const reader = new FileReader();
+                        
+                        await new Promise((resolve) => {
+                            reader.onload = async (event) => {
+                                await saveImage(i, event.target.result);
+                                resolve();
+                            };
+                            reader.readAsDataURL(file);
+                        });
+                        
+                        uploadCount++;
+                    }
+                }
+                
+                await renderImageGrid();
+                fileInput.value = '';
+                alert(`${uploadCount} imagen${uploadCount !== 1 ? 'es' : ''} subida${uploadCount !== 1 ? 's' : ''} correctamente`);
+            }
+        });
+
+        // Eliminar imagen
+        async function removeImage(index) {
+            if (confirm(`¿Eliminar imagen ${index}?`)) {
+                await deleteImage(index);
+                await renderImageGrid();
+            }
+        }
+
+        // Botón para subir múltiples imágenes
+        uploadMultipleBtn.addEventListener('click', () => {
+            currentEditingIndex = null; // Indicar que es subida múltiple
+            fileInput.click();
+        });
+
+        // Cambiar imagen de forzaje
+        forceSelect.addEventListener('change', async (e) => {
+            forceImageIndex = parseInt(e.target.value);
+            localStorage.setItem('forceImageIndex', forceImageIndex);
+            await renderImageGrid();
+        });
+
+        // Cambiar número de toques
+        touchThresholdSelect.addEventListener('change', (e) => {
+            const touchThreshold = parseInt(e.target.value);
+            localStorage.setItem('touchThreshold', touchThreshold);
+            touchesInfo.textContent = touchThreshold;
+        });
+
+        // Control de opacidad del contador
+        counterOpacitySlider.addEventListener('input', (e) => {
+            const opacity = parseInt(e.target.value);
+            counterOpacityValue.textContent = `${opacity}%`;
+            previewCounter.style.opacity = opacity / 100;
+            localStorage.setItem('counterOpacity', opacity);
+        });
+
+        // Control de opacidad del botón de configuración
+        configBtnOpacitySlider.addEventListener('input', (e) => {
+            const opacity = parseInt(e.target.value);
+            configBtnOpacityValue.textContent = `${opacity}%`;
+            previewConfigBtn.style.opacity = opacity / 100;
+            localStorage.setItem('configBtnOpacity', opacity);
+        });
+
+        // Control de color de fuente del contador
+        counterColorWhite.addEventListener('click', () => {
+            localStorage.setItem('counterColor', 'white');
+            counterColorWhite.classList.add('selected');
+            counterColorBlack.classList.remove('selected');
+            previewCounter.style.color = '#cccccc';
+        });
+
+        counterColorBlack.addEventListener('click', () => {
+            localStorage.setItem('counterColor', 'black');
+            counterColorBlack.classList.add('selected');
+            counterColorWhite.classList.remove('selected');
+            previewCounter.style.color = '#333333';
+        });
+
+        // Control de color de fondo
+        bgColorBlack.addEventListener('click', () => {
+            localStorage.setItem('bgColor', 'black');
+            bgColorBlack.classList.add('selected');
+            bgColorWhite.classList.remove('selected');
+            document.querySelector('.opacity-preview').style.background = '#000';
+        });
+
+        bgColorWhite.addEventListener('click', () => {
+            localStorage.setItem('bgColor', 'white');
+            bgColorWhite.classList.add('selected');
+            bgColorBlack.classList.remove('selected');
+            document.querySelector('.opacity-preview').style.background = '#fff';
+        });
+
+        // Control de dirección del scroll
+        scrollVertical.addEventListener('click', () => {
+            localStorage.setItem('scrollDirection', 'vertical');
+            scrollVertical.classList.add('selected');
+            scrollHorizontal.classList.remove('selected');
+        });
+
+        scrollHorizontal.addEventListener('click', () => {
+            localStorage.setItem('scrollDirection', 'horizontal');
+            scrollHorizontal.classList.add('selected');
+            scrollVertical.classList.remove('selected');
+        });
+
+        // Restaurar valores por defecto
+        resetBtn.addEventListener('click', async () => {
+            if (confirm('¿Seguro que quieres eliminar todas las imágenes personalizadas?')) {
+                const transaction = db.transaction(['images'], 'readwrite');
+                const store = transaction.objectStore('images');
+                const request = store.clear();
+
+                request.onsuccess = async () => {
+                    forceImageIndex = 4;
+                    forceSelect.value = '4';
+                    localStorage.setItem('forceImageIndex', 4);
+                    await renderImageGrid();
+                    alert('Configuración restaurada');
+                };
+            }
+        });
+
+        // Cerrar sesión
+        logoutBtn.addEventListener('click', async () => {
+            const confirmLogout = confirm(
+                '¿Estás seguro de cerrar sesión?\n\n' +
+                'Deberás ingresar tu código nuevamente para usar la app.\n' +
+                'Tus imágenes y configuraciones se mantendrán guardadas.'
+            );
+
+            if (!confirmLogout) return;
+
+            const activationCode = localStorage.getItem('activationCode');
+            const sessionId = localStorage.getItem('sessionId');
+
+            if (!activationCode || activationCode === 'standalone-mode') {
+                alert('No hay sesión activa para cerrar.');
+                return;
+            }
+
+            logoutBtn.disabled = true;
+            logoutBtn.textContent = '⏳ Cerrando sesión...';
+
+            try {
+                const SUPABASE_URL = 'https://zgatennqbagmyfbpiakr.supabase.co';
+                const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpnYXRlbm5xYmFnbXlmYnBpYWtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwMTg3NTEsImV4cCI6MjA4NjU5NDc1MX0.5c_IoL3_PM1zwFsuvblkoCoWbP9-4BSaMcIwSasLprw';
+                
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/logout`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        code: activationCode,
+                        session_id: sessionId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Error al cerrar sesión en el servidor');
+                }
+
+                console.log('✅ Sesión cerrada en el servidor');
+
+                localStorage.setItem('appLocked', 'true');
+                localStorage.setItem('lockReason', 'logout');
+                localStorage.setItem('lockTimestamp', new Date().toISOString());
+
+                localStorage.removeItem('activationCode');
+                localStorage.removeItem('sessionId');
+
+                alert('✅ Sesión cerrada correctamente.\n\nLa app se bloqueará ahora.');
+                window.location.href = './index.html';
+
+            } catch (error) {
+                console.error('❌ Error al cerrar sesión:', error);
+                
+                logoutBtn.disabled = false;
+                logoutBtn.textContent = '🚪 Cerrar Sesión';
+
+                alert(
+                    '❌ No se pudo cerrar la sesión en el servidor.\n\n' +
+                    'Error: ' + error.message + '\n\n' +
+                    'La sesión NO se cerró y puedes seguir usando la app.'
+                );
+            }
+        });
+
+        // Init
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initDB();
+
+            // Cargar índice de forzaje guardado
+            const savedForceIndex = localStorage.getItem('forceImageIndex');
+            if (savedForceIndex) {
+                forceImageIndex = parseInt(savedForceIndex);
+                forceSelect.value = forceImageIndex;
+            }
+
+            // Cargar número de toques guardado
+            const savedTouchThreshold = localStorage.getItem('touchThreshold');
+            if (savedTouchThreshold) {
+                touchThresholdSelect.value = savedTouchThreshold;
+                touchesInfo.textContent = savedTouchThreshold;
+            }
+
+            // Cargar opacidad del contador
+            const savedCounterOpacity = localStorage.getItem('counterOpacity');
+            if (savedCounterOpacity) {
+                const opacity = parseInt(savedCounterOpacity);
+                counterOpacitySlider.value = opacity;
+                counterOpacityValue.textContent = `${opacity}%`;
+                previewCounter.style.opacity = opacity / 100;
+            }
+
+            // Cargar opacidad del botón de configuración
+            const savedConfigBtnOpacity = localStorage.getItem('configBtnOpacity');
+            if (savedConfigBtnOpacity) {
+                const opacity = parseInt(savedConfigBtnOpacity);
+                configBtnOpacitySlider.value = opacity;
+                configBtnOpacityValue.textContent = `${opacity}%`;
+                previewConfigBtn.style.opacity = opacity / 100;
+            }
+
+            // Cargar color de fuente del contador
+            const savedCounterColor = localStorage.getItem('counterColor') || 'white';
+            if (savedCounterColor === 'white') {
+                counterColorWhite.classList.add('selected');
+                previewCounter.style.color = '#cccccc';
+            } else {
+                counterColorBlack.classList.add('selected');
+                previewCounter.style.color = '#333333';
+            }
+
+            // Cargar color de fondo
+            const savedBgColor = localStorage.getItem('bgColor') || 'black';
+            if (savedBgColor === 'black') {
+                bgColorBlack.classList.add('selected');
+                document.querySelector('.opacity-preview').style.background = '#000';
+            } else {
+                bgColorWhite.classList.add('selected');
+                document.querySelector('.opacity-preview').style.background = '#fff';
+            }
+
+            // Cargar dirección del scroll
+            const savedScrollDirection = localStorage.getItem('scrollDirection') || 'vertical';
+            if (savedScrollDirection === 'vertical') {
+                scrollVertical.classList.add('selected');
+            } else {
+                scrollHorizontal.classList.add('selected');
+            }
+
+            await renderImageGrid();
+        });
+    </script>
+</body>
+</html>
