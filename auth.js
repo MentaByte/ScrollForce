@@ -1,6 +1,7 @@
 /* ================================================
    AUTENTICACIÓN - Sistema de Licencias
    ⚠️ NO MODIFICAR - Compatible con todas las PWAs
+   ✅ Versión 1.3 - Compatible Safari iOS
    =============================================== */
 
 const SUPABASE_URL = "https://zgatennqbagmyfbpiakr.supabase.co";
@@ -9,11 +10,16 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 /**
  * Genera o recupera el ID único del dispositivo
  * Se almacena en localStorage para identificar el dispositivo
+ * ✅ Compatible con Safari iOS (no usa crypto.randomUUID)
  */
 export function getDeviceId() {
   let id = localStorage.getItem("device_id");
   if (!id) {
-    id = crypto.randomUUID();
+    // Alternativa compatible con Safari iOS
+    id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
     localStorage.setItem("device_id", id);
   }
   return id;
