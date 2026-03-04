@@ -684,23 +684,41 @@
             }
         }
 
-        // Obtener imagen
-        function getImageSrc(index) {
-            // Versión simplificada sin IndexedDB para máxima compatibilidad
-            return '../images/' + index + '.jpg';
+        // Obtener imagen de IndexedDB (con fallback a archivo estático)
+        function getImageFromDB(index) {
+            return new Promise(function(resolve) {
+                if (!db) { resolve(null); return; }
+                var transaction = db.transaction(['images'], 'readonly');
+                var store = transaction.objectStore('images');
+                var request = store.get(index);
+                request.onsuccess = function() {
+                    resolve(request.result && request.result.dataUrl ? request.result.dataUrl : null);
+                };
+                request.onerror = function() { resolve(null); };
+            });
         }
 
         // Cargar galería con scroll bidireccional infinito
-        function loadGallery() {
+        async function loadGallery() {
             gallery.innerHTML = '';
+
+            // Pre-cargar todas las imágenes del DB (fallback a archivo estático)
+            var dbImages = {};
+            for (var i = 1; i <= TOTAL_IMAGES; i++) {
+                dbImages[i] = await getImageFromDB(i);
+            }
+
+            function getSrc(index) {
+                return dbImages[index] || '../images/' + index + '.jpg';
+            }
 
             // Cargar imágenes: duplicamos al inicio (reverso) y al final (adelante)
             // Estructura: [20, 19, ..., 1] [1, 2, ..., 20] [1, 2, ..., 20]
-            
+
             // Primero añadimos las imágenes en reverso (para scroll hacia atrás)
             for (var i = TOTAL_IMAGES; i >= 1; i--) {
                 var img = document.createElement('img');
-                img.src = getImageSrc(i);
+                img.src = getSrc(i);
                 img.alt = 'Imagen ' + i;
                 img.dataset.imageIndex = i;
                 img.dataset.section = 'before';
@@ -710,7 +728,7 @@
             // Luego las imágenes principales
             for (var i = 1; i <= TOTAL_IMAGES; i++) {
                 var img = document.createElement('img');
-                img.src = getImageSrc(i);
+                img.src = getSrc(i);
                 img.alt = 'Imagen ' + i;
                 img.dataset.imageIndex = i;
                 img.dataset.section = 'main';
@@ -720,22 +738,22 @@
             // Luego las imágenes para scroll hacia adelante
             for (var i = 1; i <= TOTAL_IMAGES; i++) {
                 var img = document.createElement('img');
-                img.src = getImageSrc(i);
+                img.src = getSrc(i);
                 img.alt = 'Imagen ' + i;
                 img.dataset.imageIndex = i;
                 img.dataset.section = 'after';
                 gallery.appendChild(img);
             }
 
-            fullScreenImage.src = getImageSrc(FORCE_IMAGE_INDEX);
+            fullScreenImage.src = getSrc(FORCE_IMAGE_INDEX);
 
             // Posicionar en la primera imagen de la sección principal
             setTimeout(function() {
                 var scrollDirection = localStorage.getItem('scrollDirection') || 'vertical';
-                var mainSection = Array.from(gallery.children).find(img => 
+                var mainSection = Array.from(gallery.children).find(img =>
                     img.dataset.section === 'main' && img.dataset.imageIndex === '1'
                 );
-                
+
                 if (mainSection) {
                     if (scrollDirection === 'horizontal') {
                         galleryContainer.scrollLeft = mainSection.offsetLeft;
@@ -883,6 +901,13 @@
             navigator.serviceWorker.register('../sw.js')
                 .then(() => console.log('SW registrado'))
                 .catch(err => console.log('Error SW:', err));
+
+            // Recargar automáticamente cuando el SW active una nueva versión
+            navigator.serviceWorker.addEventListener('message', function(event) {
+                if (event.data && event.data.type === 'SW_UPDATED') {
+                    window.location.reload();
+                }
+            });
         }
 
         // Events
@@ -920,8 +945,8 @@
         }
 
         // Init
-        document.addEventListener('DOMContentLoaded', function() {
-            initDB();
+        document.addEventListener('DOMContentLoaded', async function() {
+            await initDB();
             loadConfig();
 
             // 🔒 VERIFICAR CANDADO PRIMERO (antes que todo)
