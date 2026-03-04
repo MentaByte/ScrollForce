@@ -93,22 +93,21 @@
 
   <script>
     /* ================================================
-       ACTIVACIÓN - Scroll Force
-       ✅ Compatible Safari iOS (sin módulos ES6)
+       ACTIVACIÓN ULTRA-COMPATIBLE
+       ✅ Safari iOS 10+, sin ES6
        =============================================== */
     
-    const messageEl = document.getElementById("message");
+    var messageEl = document.getElementById("message");
     
-    // Constantes de Supabase
-    const SUPABASE_URL = "https://zgatennqbagmyfbpiakr.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpnYXRlbm5xYmFnbXlmYnBpYWtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwMTg3NTEsImV4cCI6MjA4NjU5NDc1MX0.5c_IoL3_PM1zwFsuvblkoCoWbP9-4BSaMcIwSasLprw";
+    var SUPABASE_URL = "https://zgatennqbagmyfbpiakr.supabase.co";
+    var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpnYXRlbm5xYmFnbXlmYnBpYWtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwMTg3NTEsImV4cCI6MjA4NjU5NDc1MX0.5c_IoL3_PM1zwFsuvblkoCoWbP9-4BSaMcIwSasLprw";
 
-    // Generar ID de dispositivo (compatible Safari)
     function getDeviceId() {
-      let id = localStorage.getItem("device_id");
+      var id = localStorage.getItem("device_id");
       if (!id) {
-        id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-          var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        id = 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          var r = Math.random() * 16 | 0;
+          var v = c === 'x' ? r : (r & 0x3 | 0x8);
           return v.toString(16);
         });
         localStorage.setItem("device_id", id);
@@ -116,29 +115,47 @@
       return id;
     }
 
-    // Activar licencia
-    async function activateLicense(code) {
-      const device_id = getDeviceId();
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/activate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ code, device_id }),
-      });
-      return res.json();
+    function activateLicense(code, callback) {
+      var device_id = getDeviceId();
+      var xhr = new XMLHttpRequest();
+      
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200) {
+            try {
+              var result = JSON.parse(xhr.responseText);
+              callback(null, result);
+            } catch (e) {
+              callback(e, null);
+            }
+          } else {
+            callback(new Error("Error de conexión"), null);
+          }
+        }
+      };
+      
+      xhr.open("POST", SUPABASE_URL + "/functions/v1/activate", true);
+      xhr.setRequestHeader("Content-Type", "application/json");
+      xhr.setRequestHeader("Authorization", "Bearer " + SUPABASE_ANON_KEY);
+      xhr.send(JSON.stringify({ code: code, device_id: device_id }));
     }
 
-    // Guardar sesión
     function saveSession(token) {
       localStorage.setItem("session_token", token);
       localStorage.setItem("last_known_status", "valid");
     }
 
-    // Procesar activación
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("k");
+    function getQueryParam(name) {
+      var url = window.location.href;
+      name = name.replace(/[\[\]]/g, '\\$&');
+      var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)');
+      var results = regex.exec(url);
+      if (!results) return null;
+      if (!results[2]) return '';
+      return decodeURIComponent(results[2].replace(/\+/g, ' '));
+    }
+
+    var code = getQueryParam("k");
 
     if (!code) {
       document.querySelector('h1').textContent = 'Acceso no válido';
@@ -146,41 +163,8 @@
       document.querySelector('.loader').style.display = 'none';
       document.querySelector('.icon').textContent = '⚠️';
     } else {
-      activateLicense(code)
-        .then(result => {
-          if (result.session_token) {
-            // ✅ Activación exitosa
-            saveSession(result.session_token);
-            document.querySelector('h1').textContent = '¡Activado!';
-            document.querySelector('p').textContent = 'Redirigiendo a Scroll Force...';
-            document.querySelector('.loader').style.display = 'none';
-            document.querySelector('.icon').textContent = '✅';
-            
-            messageEl.className = 'success';
-            messageEl.textContent = 'Tu acceso ha sido activado correctamente.';
-            
-            setTimeout(() => {
-              window.location.replace("./core/");
-            }, 800);
-          } else {
-            // ❌ Error en la activación
-            document.querySelector('.loader').style.display = 'none';
-            document.querySelector('.icon').textContent = '❌';
-            
-            const mensajes = {
-              invalid_code: "El código no existe o no es válido.",
-              revoked: "Este acceso ha sido revocado.",
-              device_mismatch: "Este código ya está activo en otro dispositivo.",
-            };
-            
-            document.querySelector('h1').textContent = 'Error de activación';
-            document.querySelector('p').textContent = mensajes[result.error] || "Error desconocido.";
-            
-            messageEl.className = 'error';
-            messageEl.textContent = 'No se pudo activar tu acceso. Contacta al administrador.';
-          }
-        })
-        .catch(error => {
+      activateLicense(code, function(error, result) {
+        if (error) {
           document.querySelector('.loader').style.display = 'none';
           document.querySelector('.icon').textContent = '⚠️';
           document.querySelector('h1').textContent = 'Error de conexión';
@@ -188,7 +172,36 @@
           
           messageEl.className = 'error';
           messageEl.textContent = 'Error: ' + error.message;
-        });
+        } else if (result.session_token) {
+          saveSession(result.session_token);
+          document.querySelector('h1').textContent = '¡Activado!';
+          document.querySelector('p').textContent = 'Redirigiendo a Scroll Force...';
+          document.querySelector('.loader').style.display = 'none';
+          document.querySelector('.icon').textContent = '✅';
+          
+          messageEl.className = 'success';
+          messageEl.textContent = 'Tu acceso ha sido activado correctamente.';
+          
+          setTimeout(function() {
+            window.location.replace("./core/");
+          }, 800);
+        } else {
+          document.querySelector('.loader').style.display = 'none';
+          document.querySelector('.icon').textContent = '❌';
+          
+          var mensajes = {
+            invalid_code: "El código no existe o no es válido.",
+            revoked: "Este acceso ha sido revocado.",
+            device_mismatch: "Este código ya está activo en otro dispositivo."
+          };
+          
+          document.querySelector('h1').textContent = 'Error de activación';
+          document.querySelector('p').textContent = mensajes[result.error] || "Error desconocido.";
+          
+          messageEl.className = 'error';
+          messageEl.textContent = 'No se pudo activar tu acceso. Contacta al administrador.';
+        }
+      });
     }
   </script>
 </body>
