@@ -901,6 +901,13 @@
             navigator.serviceWorker.register('../sw.js')
                 .then(() => console.log('SW registrado'))
                 .catch(err => console.log('Error SW:', err));
+
+            // Recargar automáticamente cuando el SW active una nueva versión
+            navigator.serviceWorker.addEventListener('message', function(event) {
+                if (event.data && event.data.type === 'SW_UPDATED') {
+                    window.location.reload();
+                }
+            });
         }
 
         // Events
