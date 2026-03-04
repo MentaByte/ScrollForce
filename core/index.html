@@ -962,12 +962,16 @@
             } else {
                 // Si está en navegador (no standalone), verificar sesión
                 validateSession(function(result) {
-                    if (result.valid) {
+                    if (result.valid || result.no_internet) {
+                        // ✅ Sesión válida - cargar galería directamente sin obligar a instalar
                         loadingScreen.classList.remove('active');
-                        
-                        // SIEMPRE mostrar pantalla de instalación si está en navegador
-                        // NUNCA cargar la galería desde el navegador
-                        forceInstallScreen.classList.add('active');
+                        configButton.classList.add('show');
+                        loadGallery();
+
+                        setTimeout(function() {
+                            lockOrientation();
+                            enterFullscreen();
+                        }, 500);
                     } else if (result.error === "revoked") {
                         // Acceso revocado
                         window.location.href = "../fenix.html";
