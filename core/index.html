@@ -685,12 +685,12 @@
                     if (request.result && request.result.dataUrl) {
                         resolve(request.result.dataUrl);
                     } else {
-                        resolve(`./images/${index}.jpg`);
+                        resolve(`../images/${index}.jpg`);
                     }
                 };
 
                 request.onerror = () => {
-                    resolve(`./images/${index}.jpg`);
+                    resolve(`../images/${index}.jpg`);
                 };
             });
         }
