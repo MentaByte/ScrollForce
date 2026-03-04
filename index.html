@@ -1,988 +1,195 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#000000">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Scroll Force</title>
-    <link rel="manifest" href="./manifest.json">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background-color: #000000;
-            height: 100vh;
-            width: 100vw;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-            touch-action: pan-y;
-        }
-
-        /* Pantalla de carga/validación */
-        #loadingScreen {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            z-index: 10000;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        #loadingScreen.active {
-            display: flex;
-        }
-
-        .loading-card {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 40px 30px;
-            max-width: 400px;
-            width: 100%;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            text-align: center;
-        }
-
-        .loading-card h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
-            color: #333;
-        }
-
-        .loading-card p {
-            color: #666;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-
-        /* Pantalla de bloqueo */
-        #lockScreen {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-            z-index: 10001;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        #lockScreen.active {
-            display: flex;
-        }
-
-        .lock-card {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 40px 30px;
-            max-width: 450px;
-            width: 100%;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            text-align: center;
-        }
-
-        .lock-card .emoji {
-            font-size: 80px;
-            margin-bottom: 20px;
-        }
-
-        .lock-card h1 {
-            font-size: 28px;
-            margin-bottom: 15px;
-            color: #e74c3c;
-        }
-
-        .lock-card p {
-            color: #555;
-            margin-bottom: 20px;
-            font-size: 15px;
-            line-height: 1.6;
-        }
-
-        .lock-card .instructions {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
-            text-align: left;
-        }
-
-        .lock-card .instructions h3 {
-            color: #333;
-            font-size: 16px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-
-        .lock-card .instructions .platform {
-            margin-bottom: 15px;
-        }
-
-        .lock-card .instructions .platform-title {
-            font-weight: 600;
-            color: #667eea;
-            margin-bottom: 5px;
-            font-size: 14px;
-        }
-
-        .lock-card .instructions ol {
-            margin: 0;
-            padding-left: 20px;
-            color: #666;
-            font-size: 14px;
-        }
-
-        .lock-card .instructions li {
-            margin-bottom: 5px;
-        }
-
-        .browser-btn {
-            width: 100%;
-            padding: 15px;
-            background: white;
-            color: #667eea;
-            border: 2px solid #667eea;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-top: 10px;
-        }
-
-        .browser-btn:active {
-            transform: scale(0.98);
-            background: #f0f4ff;
-        }
-
-        /* Galería principal */
-        .gallery-container {
-            width: 100vw;
-            height: 100vh;
-            overflow-y: auto;
-            overflow-x: hidden;
-            scroll-snap-type: y mandatory;
-            display: flex;
-            flex-direction: column;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .gallery-container.horizontal {
-            overflow-y: hidden;
-            overflow-x: auto;
-            scroll-snap-type: x mandatory;
-            flex-direction: row;
-        }
-
-        .gallery {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .gallery.horizontal {
-            flex-direction: row;
-        }
-
-        .gallery img {
-            width: 100vw;
-            height: 100vh;
-            object-fit: contain;
-            scroll-snap-align: start;
-            flex: 0 0 auto;
-        }
-
-        /* Contador de toques */
-        #touchCounter {
-            position: fixed;
-            bottom: 10px;
-            left: 10px;
-            background-color: rgba(255, 255, 255, 0.15);
-            color: #cccccc;
-            padding: 2px 8px;
-            border-radius: 10px;
-            z-index: 1000;
-            font-size: 12px;
-            user-select: none;
-        }
-
-        /* Botón de configuración - pequeño y discreto */
-        #configButton {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            width: 35px;
-            height: 35px;
-            background-color: rgba(255, 255, 255, 0.1);
-            border: none;
-            border-radius: 50%;
-            color: rgba(255, 255, 255, 0.4);
-            font-size: 18px;
-            cursor: pointer;
-            z-index: 1000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(5px);
-            transition: all 0.3s;
-        }
-
-        #configButton.show {
-            display: flex;
-        }
-
-        #configButton:active {
-            background-color: rgba(255, 255, 255, 0.2);
-            color: rgba(255, 255, 255, 0.6);
-            transform: scale(0.95);
-        }
-
-        /* Imagen a pantalla completa (forzaje) */
-        #fullScreenImage {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            object-fit: contain;
-            background-color: #000000;
-            z-index: 9999;
-        }
-
-        /* Pantalla de bloqueo para forzar instalación */
-        #forceInstallScreen {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            z-index: 10002;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        #forceInstallScreen.active {
-            display: flex;
-        }
-
-        .force-install-card {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 40px 30px;
-            max-width: 400px;
-            width: 100%;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            text-align: center;
-        }
-
-        .force-install-card .emoji {
-            font-size: 80px;
-            margin-bottom: 20px;
-        }
-
-        .force-install-card h2 {
-            font-size: 24px;
-            margin-bottom: 15px;
-            color: #333;
-        }
-
-        .force-install-card p {
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 16px;
-            line-height: 1.5;
-        }
-
-        .install-giant-btn {
-            width: 100%;
-            padding: 20px;
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
-            border: none;
-            border-radius: 15px;
-            font-size: 20px;
-            font-weight: 700;
-            cursor: pointer;
-            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
-            animation: pulsebtn 2s infinite;
-        }
-
-        .install-giant-btn:active {
-            transform: scale(0.95);
-        }
-
-        @keyframes pulsebtn {
-            0%, 100% {
-                transform: scale(1);
-                box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
-            }
-            50% {
-                transform: scale(1.03);
-                box-shadow: 0 12px 35px rgba(76, 175, 80, 0.6);
-            }
-        }
-
-        /* Botón de instalación - GIGANTE */
-        #installButton {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
-            border: none;
-            padding: 30px 50px;
-            border-radius: 20px;
-            z-index: 10001;
-            display: none;
-            font-size: 24px;
-            font-weight: 700;
-            box-shadow: 0 10px 40px rgba(76, 175, 80, 0.5);
-            cursor: pointer;
-            animation: pulse 2s infinite;
-            text-align: center;
-            max-width: 90%;
-        }
-
-        #installButton::before {
-            content: '📱';
-            display: block;
-            font-size: 60px;
-            margin-bottom: 15px;
-        }
-
-        #installButton::after {
-            content: 'Toca para instalar';
-            display: block;
-            font-size: 16px;
-            font-weight: 400;
-            margin-top: 10px;
-            opacity: 0.9;
-        }
-
-        @keyframes pulse {
-            0%, 100% {
-                transform: translate(-50%, -50%) scale(1);
-                box-shadow: 0 10px 40px rgba(76, 175, 80, 0.5);
-            }
-            50% {
-                transform: translate(-50%, -50%) scale(1.05);
-                box-shadow: 0 15px 60px rgba(76, 175, 80, 0.7);
-            }
-        }
-
-        #installButton:active {
-            transform: translate(-50%, -50%) scale(0.95);
-        }
-
-        /* Overlay detrás del botón */
-        #installOverlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.85);
-            z-index: 10000;
-            backdrop-filter: blur(10px);
-        }
-
-        #installOverlay.show {
-            display: block;
-        }
-
-        #installButton.show {
-            display: block;
-        }
-
-        /* Loading spinner */
-        .spinner {
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-top: 3px solid white;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-            display: none;
-        }
-
-        .spinner.show {
-            display: block;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Activación - Scroll Force</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      padding: 40px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+    
+    .icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+    
+    h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+      color: #333;
+    }
+    
+    p {
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #000;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .error {
+      background: #fee;
+      border: 1px solid #fcc;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+      color: #c33;
+    }
+    
+    .success {
+      background: #efe;
+      border: 1px solid #cfc;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+      color: #3c3;
+    }
+  </style>
 </head>
 <body>
-    <!-- Pantalla de carga -->
-    <div id="loadingScreen" class="active">
-        <div class="loading-card">
-            <h1>🎯 Scroll Force</h1>
-            <p>Validando acceso...</p>
-            <div class="spinner show"></div>
-        </div>
-    </div>
+  <div class="container">
+    <div class="icon">🎬</div>
+    <h1>Activando acceso...</h1>
+    <p>Por favor espera mientras validamos tu código de Scroll Force.</p>
+    <div class="loader"></div>
+    <div id="message"></div>
+  </div>
 
-    <!-- Pantalla de bloqueo para forzar instalación -->
-    <div id="forceInstallScreen">
-        <div class="force-install-card">
-            <div class="emoji">📱</div>
-            <h2>¡Instala la App!</h2>
-            <p>Para usar Scroll Force, necesitas instalarla en tu pantalla de inicio. Es rápido y solo toma un toque.</p>
-            <button id="forceInstallBtn" class="install-giant-btn">📲 Instalar Ahora</button>
-        </div>
-    </div>
-
-    <!-- Overlay para instalación -->
-    <div id="installOverlay"></div>
+  <script>
+    /* ================================================
+       ACTIVACIÓN - Scroll Force
+       ✅ Compatible Safari iOS (sin módulos ES6)
+       =============================================== */
     
-    <!-- Botón de instalación GIGANTE -->
-    <button id="installButton">INSTALAR APP</button>
+    const messageEl = document.getElementById("message");
+    
+    // Constantes de Supabase
+    const SUPABASE_URL = "https://zgatennqbagmyfbpiakr.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpnYXRlbm5xYmFnbXlmYnBpYWtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwMTg3NTEsImV4cCI6MjA4NjU5NDc1MX0.5c_IoL3_PM1zwFsuvblkoCoWbP9-4BSaMcIwSasLprw";
 
-    <!-- Pantalla de bloqueo -->
-    <div id="lockScreen">
-        <div class="lock-card">
-            <div class="emoji">🔒</div>
-            <h1>Sesión Cerrada</h1>
-            <p>Esta sesión fue cerrada. Para volver a usar tu código en este dispositivo, primero debes desinstalar la app.</p>
+    // Generar ID de dispositivo (compatible Safari)
+    function getDeviceId() {
+      let id = localStorage.getItem("device_id");
+      if (!id) {
+        id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+        localStorage.setItem("device_id", id);
+      }
+      return id;
+    }
+
+    // Activar licencia
+    async function activateLicense(code) {
+      const device_id = getDeviceId();
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/activate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ code, device_id }),
+      });
+      return res.json();
+    }
+
+    // Guardar sesión
+    function saveSession(token) {
+      localStorage.setItem("session_token", token);
+      localStorage.setItem("last_known_status", "valid");
+    }
+
+    // Procesar activación
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("k");
+
+    if (!code) {
+      document.querySelector('h1').textContent = 'Acceso no válido';
+      document.querySelector('p').textContent = 'No se proporcionó un código de activación.';
+      document.querySelector('.loader').style.display = 'none';
+      document.querySelector('.icon').textContent = '⚠️';
+    } else {
+      activateLicense(code)
+        .then(result => {
+          if (result.session_token) {
+            // ✅ Activación exitosa
+            saveSession(result.session_token);
+            document.querySelector('h1').textContent = '¡Activado!';
+            document.querySelector('p').textContent = 'Redirigiendo a Scroll Force...';
+            document.querySelector('.loader').style.display = 'none';
+            document.querySelector('.icon').textContent = '✅';
             
-            <div class="instructions">
-                <h3>📱 Cómo Desinstalar</h3>
-                
-                <div class="platform">
-                    <div class="platform-title">Android / Samsung:</div>
-                    <ol>
-                        <li>Mantén presionado el ícono de la app</li>
-                        <li>Selecciona "Desinstalar" o "Eliminar"</li>
-                        <li>Confirma la desinstalación</li>
-                    </ol>
-                </div>
-                
-                <div class="platform">
-                    <div class="platform-title">iPhone / iPad:</div>
-                    <ol>
-                        <li>Mantén presionado el ícono de la app</li>
-                        <li>Toca "Eliminar App"</li>
-                        <li>Selecciona "Eliminar de Pantalla de Inicio"</li>
-                    </ol>
-                </div>
-            </div>
-
-            <p style="font-size: 13px; color: #999; margin-top: 20px;">
-                Después de desinstalar, podrás volver a ingresar tu código desde el navegador.
-            </p>
+            messageEl.className = 'success';
+            messageEl.textContent = 'Tu acceso ha sido activado correctamente.';
             
-            <button id="openBrowserBtn" class="browser-btn">🌐 Abrir en Navegador</button>
-        </div>
-    </div>
-
-    <!-- Galería principal -->
-    <div class="gallery-container" id="galleryContainer">
-        <div class="gallery" id="gallery"></div>
-    </div>
-
-    <div id="touchCounter">0</div>
-    <button id="configButton">⚙️</button>
-    <img id="fullScreenImage" alt="Forzaje">
-
-    <script type="module">
-        // ================================================
-        // AUTENTICACIÓN - ScrollForce
-        // ✅ Compatible Safari iOS (sin módulos ES6)
-        // ================================================
-        
-        const SUPABASE_URL = "https://zgatennqbagmyfbpiakr.supabase.co";
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpnYXRlbm5xYmFnbXlmYnBpYWtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwMTg3NTEsImV4cCI6MjA4NjU5NDc1MX0.5c_IoL3_PM1zwFsuvblkoCoWbP9-4BSaMcIwSasLprw";
-
-        function getDeviceId() {
-          let id = localStorage.getItem("device_id");
-          if (!id) {
-            id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-              var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-              return v.toString(16);
-            });
-            localStorage.setItem("device_id", id);
-          }
-          return id;
-        }
-
-        async function validateSession() {
-          const session_token = localStorage.getItem("session_token");
-          const device_id = getDeviceId();
-
-          if (!session_token) return { valid: false, error: "no_token" };
-
-          try {
-            const res = await fetch(`${SUPABASE_URL}/functions/v1/validate`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-              },
-              body: JSON.stringify({ session_token, device_id }),
-            });
-            const result = await res.json();
-
-            if (result.valid === true) {
-              localStorage.setItem("last_known_status", "valid");
-            } else if (result.error === "revoked") {
-              localStorage.setItem("last_known_status", "revoked");
-            }
-
-            return result;
-          } catch (e) {
-            const lastStatus = localStorage.getItem("last_known_status");
-            if (lastStatus === "revoked") {
-              return { valid: false, error: "revoked" };
-            }
-            return { valid: false, no_internet: true };
-          }
-        }
-
-        function clearSession() {
-          localStorage.removeItem("session_token");
-          localStorage.removeItem("last_known_status");
-        }
-
-
-        // Configuración
-        const TOTAL_IMAGES = 20;
-        let FORCE_IMAGE_INDEX = 4; // Imagen 4.jpg por defecto
-        let TOUCH_THRESHOLD = 10; // Configurable
-
-        // Estado global
-        let touchCount = 0;
-        let isCounting = true;
-
-        // Elementos DOM
-        const loadingScreen = document.getElementById('loadingScreen');
-        const lockScreen = document.getElementById('lockScreen');
-        const openBrowserBtn = document.getElementById('openBrowserBtn');
-        const galleryContainer = document.getElementById('galleryContainer');
-        const gallery = document.getElementById('gallery');
-        const touchCounterElement = document.getElementById('touchCounter');
-        const fullScreenImage = document.getElementById('fullScreenImage');
-        const configButton = document.getElementById('configButton');
-        const installButton = document.getElementById('installButton');
-        const installOverlay = document.getElementById('installOverlay');
-        const forceInstallScreen = document.getElementById('forceInstallScreen');
-        const forceInstallBtn = document.getElementById('forceInstallBtn');
-
-        // IndexedDB
-        let db;
-
-        function initDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open('EmojiForceDB', 1);
-                
-                request.onerror = () => reject(request.error);
-                request.onsuccess = () => {
-                    db = request.result;
-                    resolve(db);
-                };
-                
-                request.onupgradeneeded = (event) => {
-                    const db = event.target.result;
-                    if (!db.objectStoreNames.contains('images')) {
-                        db.createObjectStore('images', { keyPath: 'index' });
-                    }
-                };
-            });
-        }
-
-        // Cargar configuración guardada
-        function loadConfig() {
-            const savedForceIndex = localStorage.getItem('forceImageIndex');
-            const savedTouchThreshold = localStorage.getItem('touchThreshold');
-            const savedCounterOpacity = localStorage.getItem('counterOpacity');
-            const savedConfigBtnOpacity = localStorage.getItem('configBtnOpacity');
-            const savedCounterColor = localStorage.getItem('counterColor') || 'white';
-            const savedBgColor = localStorage.getItem('bgColor') || 'black';
-            const savedScrollDirection = localStorage.getItem('scrollDirection') || 'vertical';
-            
-            if (savedForceIndex) {
-                FORCE_IMAGE_INDEX = parseInt(savedForceIndex);
-            }
-            if (savedTouchThreshold) {
-                TOUCH_THRESHOLD = parseInt(savedTouchThreshold);
-            }
-            if (savedCounterOpacity) {
-                const opacity = parseInt(savedCounterOpacity) / 100;
-                touchCounterElement.style.opacity = opacity;
-            }
-            if (savedConfigBtnOpacity) {
-                const opacity = parseInt(savedConfigBtnOpacity) / 100;
-                configButton.style.opacity = opacity;
-            }
-
-            // Aplicar color de fuente del contador
-            if (savedCounterColor === 'white') {
-                touchCounterElement.style.color = '#cccccc';
-            } else {
-                touchCounterElement.style.color = '#333333';
-                touchCounterElement.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
-            }
-
-            // Aplicar color de fondo
-            if (savedBgColor === 'white') {
-                document.body.style.backgroundColor = '#ffffff';
-                galleryContainer.style.backgroundColor = '#ffffff';
-                fullScreenImage.style.backgroundColor = '#ffffff';
-            } else {
-                document.body.style.backgroundColor = '#000000';
-                galleryContainer.style.backgroundColor = '#000000';
-                fullScreenImage.style.backgroundColor = '#000000';
-            }
-
-            // Aplicar dirección del scroll
-            if (savedScrollDirection === 'horizontal') {
-                galleryContainer.classList.add('horizontal');
-                gallery.classList.add('horizontal');
-            } else {
-                galleryContainer.classList.remove('horizontal');
-                gallery.classList.remove('horizontal');
-            }
-        }
-
-        // Obtener imagen
-        async function getImageSrc(index) {
-            if (!db) await initDB();
-
-            return new Promise((resolve) => {
-                const transaction = db.transaction(['images'], 'readonly');
-                const store = transaction.objectStore('images');
-                const request = store.get(index);
-
-                request.onsuccess = () => {
-                    if (request.result && request.result.dataUrl) {
-                        resolve(request.result.dataUrl);
-                    } else {
-                        resolve(`./images/${index}.jpg`);
-                    }
-                };
-
-                request.onerror = () => {
-                    resolve(`./images/${index}.jpg`);
-                };
-            });
-        }
-
-        // Cargar galería con scroll bidireccional infinito
-        async function loadGallery() {
-            gallery.innerHTML = '';
-
-            // Cargar imágenes: duplicamos al inicio (reverso) y al final (adelante)
-            // Estructura: [20, 19, ..., 1] [1, 2, ..., 20] [1, 2, ..., 20]
-            
-            // Primero añadimos las imágenes en reverso (para scroll hacia atrás)
-            for (let i = TOTAL_IMAGES; i >= 1; i--) {
-                const img = document.createElement('img');
-                img.src = await getImageSrc(i);
-                img.alt = `Imagen ${i}`;
-                img.dataset.imageIndex = i;
-                img.dataset.section = 'before';
-                gallery.appendChild(img);
-            }
-
-            // Luego las imágenes principales
-            for (let i = 1; i <= TOTAL_IMAGES; i++) {
-                const img = document.createElement('img');
-                img.src = await getImageSrc(i);
-                img.alt = `Imagen ${i}`;
-                img.dataset.imageIndex = i;
-                img.dataset.section = 'main';
-                gallery.appendChild(img);
-            }
-
-            // Luego las imágenes para scroll hacia adelante
-            for (let i = 1; i <= TOTAL_IMAGES; i++) {
-                const img = document.createElement('img');
-                img.src = await getImageSrc(i);
-                img.alt = `Imagen ${i}`;
-                img.dataset.imageIndex = i;
-                img.dataset.section = 'after';
-                gallery.appendChild(img);
-            }
-
-            fullScreenImage.src = await getImageSrc(FORCE_IMAGE_INDEX);
-
-            // Posicionar en la primera imagen de la sección principal
             setTimeout(() => {
-                const scrollDirection = localStorage.getItem('scrollDirection') || 'vertical';
-                const mainSection = Array.from(gallery.children).find(img => 
-                    img.dataset.section === 'main' && img.dataset.imageIndex === '1'
-                );
-                
-                if (mainSection) {
-                    if (scrollDirection === 'horizontal') {
-                        galleryContainer.scrollLeft = mainSection.offsetLeft;
-                    } else {
-                        galleryContainer.scrollTop = mainSection.offsetTop;
-                    }
-                }
-            }, 100);
-        }
-
-        // Bucle infinito bidireccional
-        function loopGallery() {
-            const scrollDirection = localStorage.getItem('scrollDirection') || 'vertical';
-            const images = Array.from(gallery.children);
-            const imageSize = scrollDirection === 'horizontal' ? window.innerWidth : window.innerHeight;
+              window.location.replace("./core/");
+            }, 800);
+          } else {
+            // ❌ Error en la activación
+            document.querySelector('.loader').style.display = 'none';
+            document.querySelector('.icon').textContent = '❌';
             
-            if (scrollDirection === 'horizontal') {
-                const scrollLeft = galleryContainer.scrollLeft;
-                const totalWidth = gallery.scrollWidth;
-                const containerWidth = galleryContainer.clientWidth;
-                
-                // Si llegamos casi al final (scroll hacia adelante)
-                if (scrollLeft >= totalWidth - containerWidth - imageSize) {
-                    const firstMainImage = images.find(img => 
-                        img.dataset.section === 'main' && img.dataset.imageIndex === '1'
-                    );
-                    if (firstMainImage) {
-                        galleryContainer.scrollLeft = firstMainImage.offsetLeft;
-                    }
-                }
-                
-                // Si llegamos casi al inicio (scroll hacia atrás)
-                if (scrollLeft <= imageSize) {
-                    const lastMainImage = images.filter(img => 
-                        img.dataset.section === 'main'
-                    ).pop();
-                    if (lastMainImage) {
-                        galleryContainer.scrollLeft = lastMainImage.offsetLeft;
-                    }
-                }
-            } else {
-                const scrollTop = galleryContainer.scrollTop;
-                const totalHeight = gallery.scrollHeight;
-                const containerHeight = galleryContainer.clientHeight;
-                
-                // Si llegamos casi al final (scroll hacia abajo)
-                if (scrollTop >= totalHeight - containerHeight - imageSize) {
-                    const firstMainImage = images.find(img => 
-                        img.dataset.section === 'main' && img.dataset.imageIndex === '1'
-                    );
-                    if (firstMainImage) {
-                        galleryContainer.scrollTop = firstMainImage.offsetTop;
-                    }
-                }
-                
-                // Si llegamos casi al inicio (scroll hacia arriba)
-                if (scrollTop <= imageSize) {
-                    const lastMainImage = images.filter(img => 
-                        img.dataset.section === 'main'
-                    ).pop();
-                    if (lastMainImage) {
-                        galleryContainer.scrollTop = lastMainImage.offsetTop;
-                    }
-                }
-            }
-        }
-
-        // Contador de toques
-        function incrementTouchCount() {
-            if (!isCounting) return;
+            const mensajes = {
+              invalid_code: "El código no existe o no es válido.",
+              revoked: "Este acceso ha sido revocado.",
+              device_mismatch: "Este código ya está activo en otro dispositivo.",
+            };
             
-            touchCount++;
-            touchCounterElement.textContent = touchCount;
-
-            if (touchCount >= TOUCH_THRESHOLD) {
-                fullScreenImage.style.display = 'block';
-                isCounting = false;
-                
-                if (navigator.vibrate) navigator.vibrate(200);
-                enterFullscreen();
-            }
-        }
-
-        function enterFullscreen() {
-            const elem = document.documentElement;
-            if (elem.requestFullscreen) {
-                elem.requestFullscreen().catch(() => {});
-            }
-        }
-
-        function lockOrientation() {
-            if (screen.orientation?.lock) {
-                screen.orientation.lock('portrait').catch(() => {});
-            }
-        }
-
-        // PWA
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-        });
-
-        // Botón en la pantalla de bloqueo
-        forceInstallBtn.addEventListener('click', async () => {
-            if (!deferredPrompt) {
-                alert('Para instalar la app, usa el menú de tu navegador (⋮) y selecciona "Agregar a pantalla de inicio" o "Instalar app"');
-                return;
-            }
+            document.querySelector('h1').textContent = 'Error de activación';
+            document.querySelector('p').textContent = mensajes[result.error] || "Error desconocido.";
             
-            try {
-                await deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                
-                // Solo mostrar mensaje de éxito, pero NO cargar la galería
-                if (outcome === 'accepted') {
-                    // Actualizar el mensaje para indicar que debe abrir desde el ícono
-                    const card = document.querySelector('.force-install-card');
-                    card.innerHTML = `
-                        <div class="emoji">✅</div>
-                        <h2>¡App Instalada!</h2>
-                        <p>Ahora cierra esta pestaña y abre Scroll Force desde el ícono en tu pantalla de inicio.</p>
-                    `;
-                }
-                // Si rechazó, la pantalla se queda para que intente de nuevo
-                
-                deferredPrompt = null;
-            } catch (error) {
-                console.error('Error al instalar:', error);
-            }
+            messageEl.className = 'error';
+            messageEl.textContent = 'No se pudo activar tu acceso. Contacta al administrador.';
+          }
+        })
+        .catch(error => {
+          document.querySelector('.loader').style.display = 'none';
+          document.querySelector('.icon').textContent = '⚠️';
+          document.querySelector('h1').textContent = 'Error de conexión';
+          document.querySelector('p').textContent = 'No se pudo conectar con el servidor.';
+          
+          messageEl.className = 'error';
+          messageEl.textContent = 'Error: ' + error.message;
         });
-
-        // Botón flotante (ahora sin uso, pero lo dejamos por si acaso)
-        installButton.addEventListener('click', async () => {
-            if (!deferredPrompt) return;
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            if (outcome === 'accepted') {
-                installButton.classList.remove('show');
-                installOverlay.classList.remove('show');
-            }
-            deferredPrompt = null;
-        });
-
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js')
-                .then(() => console.log('SW registrado'))
-                .catch(err => console.log('Error SW:', err));
-        }
-
-        // Events
-        galleryContainer.addEventListener('scroll', loopGallery);
-        document.body.addEventListener('touchstart', incrementTouchCount);
-
-        // Click en botón config
-        configButton.addEventListener('click', () => {
-            window.location.href = './config.html';
-        });
-
-        // Botón de abrir en navegador desde pantalla de bloqueo
-        openBrowserBtn.addEventListener('click', () => {
-            // Obtener la URL base sin el modo standalone
-            const url = window.location.origin + window.location.pathname;
-            
-            // Intentar abrir en el navegador
-            if (navigator.share) {
-                navigator.share({
-                    title: 'Scroll Force',
-                    url: url
-                }).catch(() => {
-                    alert('Copia este link y ábrelo en tu navegador:\n\n' + url);
-                });
-            } else {
-                alert('Copia este link y ábrelo en tu navegador:\n\n' + url);
-            }
-        });
-
-        // Detectar si está en modo standalone (PWA instalada)
-        function isStandalone() {
-            return window.matchMedia('(display-mode: standalone)').matches ||
-                   window.navigator.standalone ||
-                   document.referrer.includes('android-app://');
-        }
-
-        // Init
-        document.addEventListener('DOMContentLoaded', async () => {
-            await initDB();
-            loadConfig();
-
-            // 🔒 VERIFICAR CANDADO PRIMERO (antes que todo)
-            const isLocked = localStorage.getItem('appLocked') === 'true';
-            
-            if (isLocked) {
-                // Mostrar pantalla de bloqueo y detener ejecución
-                loadingScreen.classList.remove('active');
-                lockScreen.classList.add('active');
-                return; // No ejecutar nada más
-            }
-
-            const standalone = isStandalone();
-            
-            // Si está en modo standalone (PWA instalada), validar sesión
-            if (standalone) {
-                const result = await validateSession();
-                
-                if (result.valid || result.no_internet) {
-                    // ✅ Sesión válida o sin internet (permitir acceso offline)
-                    loadingScreen.classList.remove('active');
-                    configButton.classList.add('show');
-                    await loadGallery();
-                    
-                    // Entrar en fullscreen después de un breve delay
-                    setTimeout(() => {
-                        lockOrientation();
-                        enterFullscreen();
-                    }, 500);
-                } else if (result.error === "revoked") {
-                    // ❌ Acceso revocado
-                    window.location.href = "./fenix.html";
-                } else {
-                    // ❌ Sin sesión válida
-                    alert('No tienes acceso. Necesitas activar un código primero.');
-                    window.location.href = "./activate.html";
-                }
-            } else {
-                // Si está en navegador (no standalone), verificar sesión
-                const result = await validateSession();
-                
-                if (result.valid) {
-                    loadingScreen.classList.remove('active');
-                    
-                    // SIEMPRE mostrar pantalla de instalación si está en navegador
-                    // NUNCA cargar la galería desde el navegador
-                    forceInstallScreen.classList.add('active');
-                } else if (result.error === "revoked") {
-                    // Acceso revocado
-                    window.location.href = "./fenix.html";
-                } else {
-                    // Sin sesión - redirigir a activación
-                    window.location.href = "./activate.html";
-                }
-            }
-        });
-    </script>
+    }
+  </script>
 </body>
 </html>

@@ -1,101 +1,173 @@
-# 🔄 Actualización ScrollForce → v1.3 (Safari compatible)
+# 🔄 ScrollForce → v1.3 Reestructurado (Plantilla)
 
-## 📂 Archivos a reemplazar:
+## 🎯 Nueva Estructura
 
-### 1. `auth.js` (raíz del proyecto)
-✅ **Reemplaza completamente** el archivo actual con el nuevo
+ScrollForce ahora sigue la estructura de la plantilla PWA v1.3:
 
-**Cambio principal:**
-- Fix de `crypto.randomUUID` → Compatible Safari iOS
-
----
-
-### 2. `index.html` (raíz del proyecto - archivo principal)
-✅ **Reemplaza completamente** el archivo actual con el nuevo
-
-**Cambios principales:**
-- Sin import de módulos ES6 (línea 516)
-- Funciones de auth integradas inline (líneas 516-578)
-- Todo el código de ScrollForce se mantiene igual
-- Compatible Safari iOS
-
-**🔧 Cambio específico:**
-- **Antes:** `import { validateSession, clearSession } from "./auth.js";` ❌
-- **Ahora:** Funciones inline sin import ✅
+```
+scrollforce/
+├── index.html          # ← NUEVO: Solo activación
+├── auth.js             # ← ACTUALIZADO: v1.3 Safari compatible
+├── manifest.json       # (mantener el actual)
+├── sw.js               # (mantener el actual)
+├── fenix.html          # (mantener el actual)
+├── config.html         # (mantener el actual)
+└── core/
+    └── index.html      # ← NUEVO: Toda la aplicación
+```
 
 ---
 
-## 🚀 Instrucciones de actualización:
+## 📂 Cambios principales:
 
-### Paso 1: Backup (recomendado)
+### ✅ Antes (estructura antigua):
+```
+scrollforce/
+└── index.html    # Todo mezclado: activación + validación + app (932 líneas)
+```
+
+### ✅ Ahora (estructura plantilla):
+```
+scrollforce/
+├── index.html          # Solo activación (limpio, 156 líneas)
+└── core/
+    └── index.html      # Solo la app con validación (limpio)
+```
+
+---
+
+## 🚀 Instrucciones de migración:
+
+### Paso 1: Backup completo
 ```bash
-# Haz backup de tus archivos actuales
-cp auth.js auth.js.backup
-cp index.html index.html.backup
+# Haz backup de todo el proyecto
+cp -r scrollforce scrollforce-backup
 ```
 
 ### Paso 2: Reemplazar archivos
-1. Reemplaza `auth.js` con el nuevo
-2. Reemplaza `index.html` con el nuevo
 
-### Paso 3: Subir a GitHub
+**A. Archivos NUEVOS (crear):**
+1. Crear carpeta `core/`
+2. Poner `core/index.html` (el nuevo) en `core/`
+
+**B. Archivos a REEMPLAZAR:**
+1. `index.html` (raíz) → Reemplazar con el nuevo (solo activación)
+2. `auth.js` → Reemplazar con v1.3
+
+**C. Archivos a MANTENER (no tocar):**
+- `manifest.json`
+- `sw.js`
+- `fenix.html`
+- `config.html`
+- Cualquier carpeta de imágenes o recursos
+
+### Paso 3: Actualizar Service Worker (IMPORTANTE)
+
+En `sw.js`, actualizar el array PRECACHE para incluir `core/`:
+
+```javascript
+const PRECACHE = [
+  BASE,
+  BASE + 'index.html',
+  BASE + 'auth.js',
+  BASE + 'core/index.html',  // ← AGREGAR ESTA LÍNEA
+  BASE + 'fenix.html',
+  BASE + 'config.html',
+  BASE + 'manifest.json',
+  // ... tus otros recursos
+];
+```
+
+### Paso 4: Subir a GitHub
 ```bash
-git add auth.js index.html
-git commit -m "Update to v1.3 - Safari iOS compatible"
+git add .
+git commit -m "Restructure to v1.3 template - Safari iOS compatible"
 git push
 ```
 
-### Paso 4: Probar
-1. Abre en Chrome/Android → Debe seguir funcionando
-2. Abre en Safari/iOS → **Debe funcionar ahora** ✅
+### Paso 5: Probar
+1. Abre con código: `https://tudominio.com/?k=CODIGO`
+2. Debe activar y redirigir a `/core/`
+3. La app debe cargar normalmente
+4. **Probar en Safari iOS** ✅
 
 ---
 
-## ✅ Verificación
+## ✅ Beneficios de la nueva estructura:
 
-Después de actualizar, verifica que:
-- [ ] La app se abre en Chrome
-- [ ] La app se abre en Safari iOS
-- [ ] La validación de sesión funciona
-- [ ] El scroll funciona
-- [ ] Las imágenes cargan correctamente
-- [ ] Todas las funcionalidades de ScrollForce siguen igual
+1. ✅ **Compatible Safari iOS** (sin módulos ES6)
+2. ✅ **Más fácil de mantener** (separación clara)
+3. ✅ **Homogéneo con otras PWAs** (misma estructura que Calculadora y MercadoForzado)
+4. ✅ **Fácil de actualizar** (cambios aislados por archivo)
+5. ✅ **Menos propenso a errores** (código más simple y separado)
 
 ---
 
-## ⚠️ Notas importantes
+## 🔍 Verificación post-migración:
 
-1. **NO** modifiques las funciones de auth inline (líneas 516-578)
-2. Todo tu código personalizado de ScrollForce se mantiene intacto
-3. Solo cambia el sistema de autenticación
+- [ ] `index.html` solo muestra página de activación
+- [ ] Al activar con código, redirige a `/core/`
+- [ ] `/core/` carga la galería normalmente
+- [ ] Validación de sesión funciona
+- [ ] Botón de config lleva a `../config.html`
+- [ ] Funcionamiento offline correcto
+- [ ] **Todo funciona en Safari iOS** ✅
 
 ---
 
-## 🐛 Si algo sale mal
+## ⚠️ Notas importantes:
 
-1. Restaura los backups:
+### URLs actualizadas en core/:
+- `./fenix.html` → `../fenix.html`
+- `./activate.html` → `../` (index raíz)
+- `./config.html` → `../config.html`
+
+### Flujo de activación:
+```
+Usuario recibe: /?k=CODIGO
+    ↓
+index.html valida
+    ↓
+Redirige a: /core/
+    ↓
+core/index.html valida sesión
+    ↓
+Carga galería
+```
+
+---
+
+## 🐛 Si algo sale mal:
+
+### Problema: "No se encuentra core/index.html"
+**Solución:** Verifica que creaste la carpeta `core/` y pusiste el archivo ahí
+
+### Problema: "Loop de redirección"
+**Solución:** Verifica que las rutas en `core/index.html` usan `../` correctamente
+
+### Problema: "Config no funciona"
+**Solución:** Verifica que `config.html` siga en la raíz (no en core/)
+
+### Restaurar backup:
 ```bash
-cp auth.js.backup auth.js
-cp index.html.backup index.html
-```
-
-2. Revisa los archivos y comparte el error
-
----
-
-## 📝 Estructura de ScrollForce
-
-ScrollForce usa una estructura simple:
-```
-scrollforce/
-├── index.html         # Archivo principal (TODO en uno)
-├── auth.js            # Autenticación (v1.3)
-├── config.html        # Configuración
-├── activate.html      # Activación
-├── fenix.html         # Revocación
-└── manifest.json      # PWA config
+rm -rf scrollforce
+mv scrollforce-backup scrollforce
 ```
 
 ---
 
-**✅ Después de esta actualización, ScrollForce funcionará perfectamente en Safari iOS**
+## 📋 Archivos incluidos en esta actualización:
+
+1. ✅ `index.html` - Activación (raíz)
+2. ✅ `auth.js` - Autenticación v1.3 (raíz)
+3. ✅ `core/index.html` - Aplicación completa
+
+---
+
+**✅ Después de esta reestructuración, ScrollForce será:**
+- Compatible con Safari iOS
+- Homogéneo con las otras PWAs
+- Más fácil de mantener
+- Siguiendo las mejores prácticas
+
+🎬 ¡Scroll Force v1.3 listo!

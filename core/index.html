@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+
+<script>
+  /* ================================================
+     VALIDACIÓN DE SESIÓN - Scroll Force
+     ✅ Compatible Safari iOS (sin módulos ES6)
+     =============================================== */
+  
+  // Constantes de Supabase
+  const SUPABASE_URL = "https://zgatennqbagmyfbpiakr.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpnYXRlbm5xYmFnbXlmYnBpYWtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwMTg3NTEsImV4cCI6MjA4NjU5NDc1MX0.5c_IoL3_PM1zwFsuvblkoCoWbP9-4BSaMcIwSasLprw";
+
+  function getDeviceId() {
+    let id = localStorage.getItem("device_id");
+    if (!id) {
+      id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+      localStorage.setItem("device_id", id);
+    }
+    return id;
+  }
+
+  async function validateSession() {
+    const session_token = localStorage.getItem("session_token");
+    const device_id = getDeviceId();
+
+    if (!session_token) return { valid: false, error: "no_token" };
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/validate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ session_token, device_id }),
+      });
+      const result = await res.json();
+
+      if (result.valid === true) {
+        localStorage.setItem("last_known_status", "valid");
+      } else if (result.error === "revoked") {
+        localStorage.setItem("last_known_status", "revoked");
+      }
+
+      return result;
+    } catch (e) {
+      const lastStatus = localStorage.getItem("last_known_status");
+      if (lastStatus === "revoked") {
+        return { valid: false, error: "revoked" };
+      }
+      return { valid: false, no_internet: true };
+    }
+  }
+
+  function clearSession() {
+    localStorage.removeItem("session_token");
+    localStorage.removeItem("last_known_status");
+  }
+</script>
+
+
+        // Configuración
+        const TOTAL_IMAGES = 20;
+        let FORCE_IMAGE_INDEX = 4; // Imagen 4.jpg por defecto
+        let TOUCH_THRESHOLD = 10; // Configurable
+
+        // Estado global
+        let touchCount = 0;
+        let isCounting = true;
+
+        // Elementos DOM
+        const loadingScreen = document.getElementById('loadingScreen');
+        const lockScreen = document.getElementById('lockScreen');
+        const openBrowserBtn = document.getElementById('openBrowserBtn');
+        const galleryContainer = document.getElementById('galleryContainer');
+        const gallery = document.getElementById('gallery');
+        const touchCounterElement = document.getElementById('touchCounter');
+        const fullScreenImage = document.getElementById('fullScreenImage');
+        const configButton = document.getElementById('configButton');
+        const installButton = document.getElementById('installButton');
+        const installOverlay = document.getElementById('installOverlay');
+        const forceInstallScreen = document.getElementById('forceInstallScreen');
+        const forceInstallBtn = document.getElementById('forceInstallBtn');
+
+        // IndexedDB
+        let db;
+
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('EmojiForceDB', 1);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('images')) {
+                        db.createObjectStore('images', { keyPath: 'index' });
+                    }
+                };
+            });
+        }
+
+        // Cargar configuración guardada
+        function loadConfig() {
+            const savedForceIndex = localStorage.getItem('forceImageIndex');
+            const savedTouchThreshold = localStorage.getItem('touchThreshold');
+            const savedCounterOpacity = localStorage.getItem('counterOpacity');
+            const savedConfigBtnOpacity = localStorage.getItem('configBtnOpacity');
+            const savedCounterColor = localStorage.getItem('counterColor') || 'white';
+            const savedBgColor = localStorage.getItem('bgColor') || 'black';
+            const savedScrollDirection = localStorage.getItem('scrollDirection') || 'vertical';
+            
+            if (savedForceIndex) {
+                FORCE_IMAGE_INDEX = parseInt(savedForceIndex);
+            }
+            if (savedTouchThreshold) {
+                TOUCH_THRESHOLD = parseInt(savedTouchThreshold);
+            }
+            if (savedCounterOpacity) {
+                const opacity = parseInt(savedCounterOpacity) / 100;
+                touchCounterElement.style.opacity = opacity;
+            }
+            if (savedConfigBtnOpacity) {
+                const opacity = parseInt(savedConfigBtnOpacity) / 100;
+                configButton.style.opacity = opacity;
+            }
+
+            // Aplicar color de fuente del contador
+            if (savedCounterColor === 'white') {
+                touchCounterElement.style.color = '#cccccc';
+            } else {
+                touchCounterElement.style.color = '#333333';
+                touchCounterElement.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
+            }
+
+            // Aplicar color de fondo
+            if (savedBgColor === 'white') {
+                document.body.style.backgroundColor = '#ffffff';
+                galleryContainer.style.backgroundColor = '#ffffff';
+                fullScreenImage.style.backgroundColor = '#ffffff';
+            } else {
+                document.body.style.backgroundColor = '#000000';
+                galleryContainer.style.backgroundColor = '#000000';
+                fullScreenImage.style.backgroundColor = '#000000';
+            }
+
+            // Aplicar dirección del scroll
+            if (savedScrollDirection === 'horizontal') {
+                galleryContainer.classList.add('horizontal');
+                gallery.classList.add('horizontal');
+            } else {
+                galleryContainer.classList.remove('horizontal');
+                gallery.classList.remove('horizontal');
+            }
+        }
+
+        // Obtener imagen
+        async function getImageSrc(index) {
+            if (!db) await initDB();
+
+            return new Promise((resolve) => {
+                const transaction = db.transaction(['images'], 'readonly');
+                const store = transaction.objectStore('images');
+                const request = store.get(index);
+
+                request.onsuccess = () => {
+                    if (request.result && request.result.dataUrl) {
+                        resolve(request.result.dataUrl);
+                    } else {
+                        resolve(`./images/${index}.jpg`);
+                    }
+                };
+
+                request.onerror = () => {
+                    resolve(`./images/${index}.jpg`);
+                };
+            });
+        }
+
+        // Cargar galería con scroll bidireccional infinito
+        async function loadGallery() {
+            gallery.innerHTML = '';
+
+            // Cargar imágenes: duplicamos al inicio (reverso) y al final (adelante)
+            // Estructura: [20, 19, ..., 1] [1, 2, ..., 20] [1, 2, ..., 20]
+            
+            // Primero añadimos las imágenes en reverso (para scroll hacia atrás)
+            for (let i = TOTAL_IMAGES; i >= 1; i--) {
+                const img = document.createElement('img');
+                img.src = await getImageSrc(i);
+                img.alt = `Imagen ${i}`;
+                img.dataset.imageIndex = i;
+                img.dataset.section = 'before';
+                gallery.appendChild(img);
+            }
+
+            // Luego las imágenes principales
+            for (let i = 1; i <= TOTAL_IMAGES; i++) {
+                const img = document.createElement('img');
+                img.src = await getImageSrc(i);
+                img.alt = `Imagen ${i}`;
+                img.dataset.imageIndex = i;
+                img.dataset.section = 'main';
+                gallery.appendChild(img);
+            }
+
+            // Luego las imágenes para scroll hacia adelante
+            for (let i = 1; i <= TOTAL_IMAGES; i++) {
+                const img = document.createElement('img');
+                img.src = await getImageSrc(i);
+                img.alt = `Imagen ${i}`;
+                img.dataset.imageIndex = i;
+                img.dataset.section = 'after';
+                gallery.appendChild(img);
+            }
+
+            fullScreenImage.src = await getImageSrc(FORCE_IMAGE_INDEX);
+
+            // Posicionar en la primera imagen de la sección principal
+            setTimeout(() => {
+                const scrollDirection = localStorage.getItem('scrollDirection') || 'vertical';
+                const mainSection = Array.from(gallery.children).find(img => 
+                    img.dataset.section === 'main' && img.dataset.imageIndex === '1'
+                );
+                
+                if (mainSection) {
+                    if (scrollDirection === 'horizontal') {
+                        galleryContainer.scrollLeft = mainSection.offsetLeft;
+                    } else {
+                        galleryContainer.scrollTop = mainSection.offsetTop;
+                    }
+                }
+            }, 100);
+        }
+
+        // Bucle infinito bidireccional
+        function loopGallery() {
+            const scrollDirection = localStorage.getItem('scrollDirection') || 'vertical';
+            const images = Array.from(gallery.children);
+            const imageSize = scrollDirection === 'horizontal' ? window.innerWidth : window.innerHeight;
+            
+            if (scrollDirection === 'horizontal') {
+                const scrollLeft = galleryContainer.scrollLeft;
+                const totalWidth = gallery.scrollWidth;
+                const containerWidth = galleryContainer.clientWidth;
+                
+                // Si llegamos casi al final (scroll hacia adelante)
+                if (scrollLeft >= totalWidth - containerWidth - imageSize) {
+                    const firstMainImage = images.find(img => 
+                        img.dataset.section === 'main' && img.dataset.imageIndex === '1'
+                    );
+                    if (firstMainImage) {
+                        galleryContainer.scrollLeft = firstMainImage.offsetLeft;
+                    }
+                }
+                
+                // Si llegamos casi al inicio (scroll hacia atrás)
+                if (scrollLeft <= imageSize) {
+                    const lastMainImage = images.filter(img => 
+                        img.dataset.section === 'main'
+                    ).pop();
+                    if (lastMainImage) {
+                        galleryContainer.scrollLeft = lastMainImage.offsetLeft;
+                    }
+                }
+            } else {
+                const scrollTop = galleryContainer.scrollTop;
+                const totalHeight = gallery.scrollHeight;
+                const containerHeight = galleryContainer.clientHeight;
+                
+                // Si llegamos casi al final (scroll hacia abajo)
+                if (scrollTop >= totalHeight - containerHeight - imageSize) {
+                    const firstMainImage = images.find(img => 
+                        img.dataset.section === 'main' && img.dataset.imageIndex === '1'
+                    );
+                    if (firstMainImage) {
+                        galleryContainer.scrollTop = firstMainImage.offsetTop;
+                    }
+                }
+                
+                // Si llegamos casi al inicio (scroll hacia arriba)
+                if (scrollTop <= imageSize) {
+                    const lastMainImage = images.filter(img => 
+                        img.dataset.section === 'main'
+                    ).pop();
+                    if (lastMainImage) {
+                        galleryContainer.scrollTop = lastMainImage.offsetTop;
+                    }
+                }
+            }
+        }
+
+        // Contador de toques
+        function incrementTouchCount() {
+            if (!isCounting) return;
+            
+            touchCount++;
+            touchCounterElement.textContent = touchCount;
+
+            if (touchCount >= TOUCH_THRESHOLD) {
+                fullScreenImage.style.display = 'block';
+                isCounting = false;
+                
+                if (navigator.vibrate) navigator.vibrate(200);
+                enterFullscreen();
+            }
+        }
+
+        function enterFullscreen() {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen().catch(() => {});
+            }
+        }
+
+        function lockOrientation() {
+            if (screen.orientation?.lock) {
+                screen.orientation.lock('portrait').catch(() => {});
+            }
+        }
+
+        // PWA
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+        });
+
+        // Botón en la pantalla de bloqueo
+        forceInstallBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) {
+                alert('Para instalar la app, usa el menú de tu navegador (⋮) y selecciona "Agregar a pantalla de inicio" o "Instalar app"');
+                return;
+            }
+            
+            try {
+                await deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                
+                // Solo mostrar mensaje de éxito, pero NO cargar la galería
+                if (outcome === 'accepted') {
+                    // Actualizar el mensaje para indicar que debe abrir desde el ícono
+                    const card = document.querySelector('.force-install-card');
+                    card.innerHTML = `
+                        <div class="emoji">✅</div>
+                        <h2>¡App Instalada!</h2>
+                        <p>Ahora cierra esta pestaña y abre Scroll Force desde el ícono en tu pantalla de inicio.</p>
+                    `;
+                }
+                // Si rechazó, la pantalla se queda para que intente de nuevo
+                
+                deferredPrompt = null;
+            } catch (error) {
+                console.error('Error al instalar:', error);
+            }
+        });
+
+        // Botón flotante (ahora sin uso, pero lo dejamos por si acaso)
+        installButton.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                installButton.classList.remove('show');
+                installOverlay.classList.remove('show');
+            }
+            deferredPrompt = null;
+        });
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js')
+                .then(() => console.log('SW registrado'))
+                .catch(err => console.log('Error SW:', err));
+        }
+
+        // Events
+        galleryContainer.addEventListener('scroll', loopGallery);
+        document.body.addEventListener('touchstart', incrementTouchCount);
+
+        // Click en botón config
+        configButton.addEventListener('click', () => {
+            window.location.href = '../config.html';
+        });
+
+        // Botón de abrir en navegador desde pantalla de bloqueo
+        openBrowserBtn.addEventListener('click', () => {
+            // Obtener la URL base sin el modo standalone
+            const url = window.location.origin + window.location.pathname;
+            
+            // Intentar abrir en el navegador
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Scroll Force',
+                    url: url
+                }).catch(() => {
+                    alert('Copia este link y ábrelo en tu navegador:\n\n' + url);
+                });
+            } else {
+                alert('Copia este link y ábrelo en tu navegador:\n\n' + url);
+            }
+        });
+
+        // Detectar si está en modo standalone (PWA instalada)
+        function isStandalone() {
+            return window.matchMedia('(display-mode: standalone)').matches ||
+                   window.navigator.standalone ||
+                   document.referrer.includes('android-app://');
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initDB();
+            loadConfig();
+
+            // 🔒 VERIFICAR CANDADO PRIMERO (antes que todo)
+            const isLocked = localStorage.getItem('appLocked') === 'true';
+            
+            if (isLocked) {
+                // Mostrar pantalla de bloqueo y detener ejecución
+                loadingScreen.classList.remove('active');
+                lockScreen.classList.add('active');
+                return; // No ejecutar nada más
+            }
+
+            const standalone = isStandalone();
+            
+            // Si está en modo standalone (PWA instalada), validar sesión
+            if (standalone) {
+                const result = await validateSession();
+                
+                if (result.valid || result.no_internet) {
+                    // ✅ Sesión válida o sin internet (permitir acceso offline)
+                    loadingScreen.classList.remove('active');
+                    configButton.classList.add('show');
+                    await loadGallery();
+                    
+                    // Entrar en fullscreen después de un breve delay
+                    setTimeout(() => {
+                        lockOrientation();
+                        enterFullscreen();
+                    }, 500);
+                } else if (result.error === "revoked") {
+                    // ❌ Acceso revocado
+                    window.location.href = "../fenix.html";
+                } else {
+                    // ❌ Sin sesión válida
+                    alert('No tienes acceso. Necesitas activar un código primero.');
+                    window.location.href = "../";
+                }
+            } else {
+                // Si está en navegador (no standalone), verificar sesión
+                const result = await validateSession();
+                
+                if (result.valid) {
+                    loadingScreen.classList.remove('active');
+                    
+                    // SIEMPRE mostrar pantalla de instalación si está en navegador
+                    // NUNCA cargar la galería desde el navegador
+                    forceInstallScreen.classList.add('active');
+                } else if (result.error === "revoked") {
+                    // Acceso revocado
+                    window.location.href = "../fenix.html";
+                } else {
+                    // Sin sesión - redirigir a activación
+                    window.location.href = "../";
+                }
+            }
+        });
+    </script>
+</body>
+</html>
