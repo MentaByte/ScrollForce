@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Scroll Force</title>
-    <link rel="manifest" href="./manifest.json">
+    <link rel="manifest" href="../manifest.json">
     <style>
         * {
             margin: 0;
@@ -880,7 +880,7 @@
         });
 
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js')
+            navigator.serviceWorker.register('../sw.js')
                 .then(() => console.log('SW registrado'))
                 .catch(err => console.log('Error SW:', err));
         }
